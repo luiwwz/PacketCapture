@@ -2,6 +2,7 @@
 #include "PacketCapturer.h"
 #include "PacketLogger.h"
 #include "PacketStatistics.h"
+#include "DatabaseManager.h"
 #include <iostream>
 #include <pcap.h>
 
@@ -21,7 +22,7 @@ int Menu::getPacketCount() const {
 
 void Menu::showMainMenu() {
     int choice;
-    
+
     while (true) {
         std::cout << "\n╔════════════════════════════════╗\n";
         std::cout << "║   PacketCapturer Menu          ║\n";
@@ -31,15 +32,17 @@ void Menu::showMainMenu() {
         std::cout << "3. Change logging settings\n";
         std::cout << "4. View statistics\n";
         std::cout << "5. Show log\n";
-	std::cout << "6. Change packet count\n";
-	std::cout << "7. Exit\n";
+        std::cout << "6. Change packet count\n";
+        std::cout << "7. View database packets\n";
+        std::cout << "8. View security alerts\n";
+        std::cout << "9. Exit\n";
         std::cout << "\nCurrent Interface: " << currentInterface << "\n";
-	std::cout << "Packet Count: " << packetCount << "\n";
+        std::cout << "Packet Count: " << packetCount << "\n";
         std::cout << "Logging: " << (loggingEnabled ? "Enabled" : "Disabled") << "\n";
         std::cout << "\nChoose option: ";
         std::cin >> choice;
         std::cin.ignore();
-        
+
         switch (choice) {
         case 1:
             startPacketCapture();
@@ -55,12 +58,22 @@ void Menu::showMainMenu() {
             break;
         case 5:
             PacketLogger::showLog();
-	    break;
-	case 6:
-	    showPacketCountMenu();
-            break;    
-	case 7:
-	    std::cout << "Exiting...\n";
+            break;
+        case 6:
+            showPacketCountMenu();
+            break;
+        case 7: {
+            DatabaseManager* db = DatabaseManager::getInstance();
+            db->displayPackets();
+            break;
+        }
+        case 8: {
+            DatabaseManager* db = DatabaseManager::getInstance();
+            db->displayAlerts();
+            break;
+        }
+        case 9:
+            std::cout << "Exiting...\n";
             return;
         default:
             std::cout << "Invalid option!\n";
@@ -70,16 +83,16 @@ void Menu::showMainMenu() {
 
 void Menu::showInterfaceMenu() {
     int choice;
-    
+
     std::cout << "\nAvailable interfaces:\n";
     std::cout << "1. eth0\n";
     std::cout << "2. lo\n";
     std::cout << "3. any (eth0 and lo)\n";
-    
+
     std::cout << "\nChoose interface: ";
     std::cin >> choice;
     std::cin.ignore();
-    
+
     switch (choice) {
     case 1:
         currentInterface = "eth0";
@@ -100,7 +113,7 @@ void Menu::showInterfaceMenu() {
 
 void Menu::showSettingsMenu() {
     int choice;
-    
+
     std::cout << "\nSettings:\n";
     std::cout << "1. Enable logging\n";
     std::cout << "2. Disable logging\n";
@@ -108,7 +121,7 @@ void Menu::showSettingsMenu() {
     std::cout << "Choose option: ";
     std::cin >> choice;
     std::cin.ignore();
-    
+
     switch (choice) {
     case 1:
         loggingEnabled = true;
@@ -147,24 +160,24 @@ void Menu::showPacketCountMenu() {
 void Menu::startPacketCapture() {
     std::string ip;
     int protocolChoice;
-    
+
     std::cout << "\n=== Packet Capture Settings ===\n";
-    
+
     std::cout << "Please enter IP address (0 for all): ";
     std::cin >> ip;
     std::cin.ignore();
-    
+
     std::cout << "Choose protocol:\n";
     std::cout << "1 - all\n2 - tcp\n3 - udp\n4 - icmp\n5 - arp\n";
     std::cout << "Choose option: ";
     std::cin >> protocolChoice;
     std::cin.ignore();
-    
+
     std::cout << "\nStarting capture on " << currentInterface << "...\n";
     std::cout << "Will capture " << packetCount << " packets...\n";
 
     PacketCapturer capturer(currentInterface);
     capturer.startCapture(ip, protocolChoice, packetCount);
-    
+
     std::cout << "\nCapture stopped. Returning to menu...\n";
 }

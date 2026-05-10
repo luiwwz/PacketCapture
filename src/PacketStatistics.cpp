@@ -1,4 +1,5 @@
 #include "PacketStatistics.h"
+#include "SynchronizationManager.h"
 #include <iostream>
 
 int PacketStatistics::totalPackets = 0;
@@ -8,21 +9,100 @@ int PacketStatistics::udpPackets = 0;
 int PacketStatistics::icmpPackets = 0;
 int PacketStatistics::arpPackets = 0;
 
-void PacketStatistics::incrementTotal() { totalPackets++; }
-void PacketStatistics::incrementIPv4() { ipv4Packets++; }
-void PacketStatistics::incrementTCP() { tcpPackets++; }
-void PacketStatistics::incrementUDP() { udpPackets++; }
-void PacketStatistics::incrementICMP() { icmpPackets++; }
-void PacketStatistics::incrementARP() { arpPackets++; }
+void PacketStatistics::incrementTotal() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    totalPackets++;
+    sync->unlockStatistics();
+}
 
-int PacketStatistics::getTotalPackets() { return totalPackets; }
-int PacketStatistics::getIPv4Packets() { return ipv4Packets; }
-int PacketStatistics::getTCPPackets() { return tcpPackets; }
-int PacketStatistics::getUDPPackets() { return udpPackets; }
-int PacketStatistics::getICMPPackets() { return icmpPackets; }
-int PacketStatistics::getARPPackets() { return arpPackets; }
+void PacketStatistics::incrementIPv4() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    ipv4Packets++;
+    sync->unlockStatistics();
+}
+
+void PacketStatistics::incrementTCP() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    tcpPackets++;
+    sync->unlockStatistics();
+}
+
+void PacketStatistics::incrementUDP() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    udpPackets++;
+    sync->unlockStatistics();
+}
+
+void PacketStatistics::incrementICMP() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    icmpPackets++;
+    sync->unlockStatistics();
+}
+
+void PacketStatistics::incrementARP() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    arpPackets++;
+    sync->unlockStatistics();
+}
+
+int PacketStatistics::getTotalPackets() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    int result = totalPackets;
+    sync->unlockStatistics();
+    return result;
+}
+
+int PacketStatistics::getIPv4Packets() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    int result = ipv4Packets;
+    sync->unlockStatistics();
+    return result;
+}
+
+int PacketStatistics::getTCPPackets() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    int result = tcpPackets;
+    sync->unlockStatistics();
+    return result;
+}
+
+int PacketStatistics::getUDPPackets() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    int result = udpPackets;
+    sync->unlockStatistics();
+    return result;
+}
+
+int PacketStatistics::getICMPPackets() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    int result = icmpPackets;
+    sync->unlockStatistics();
+    return result;
+}
+
+int PacketStatistics::getARPPackets() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+    int result = arpPackets;
+    sync->unlockStatistics();
+    return result;
+}
 
 void PacketStatistics::printStatistics() {
+    SynchronizationManager* sync = SynchronizationManager::getInstance();
+    sync->lockStatistics();
+
     std::cout << "\n===== Statistics =====\n";
     std::cout << "Total: " << totalPackets << "\n";
     std::cout << "IPv4: " << ipv4Packets << "\n";
@@ -31,4 +111,6 @@ void PacketStatistics::printStatistics() {
     std::cout << "ICMP: " << icmpPackets << "\n";
     std::cout << "ARP: " << arpPackets << "\n";
     std::cout << "======================\n";
+
+    sync->unlockStatistics();
 }
