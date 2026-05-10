@@ -54,20 +54,32 @@ The sniffer currently recognizes and analyzes:
 PacketCapture/
 │
 ├── include/
+│   ├── DatabaseManager.h
+│   ├── IDSDetector.h
 │   ├── Menu.h
+│   ├── PacketBuffer.h
 │   ├── PacketCapturer.h
 │   ├── PacketLogger.h
 │   ├── PacketParser.h
-│   └── PacketStatistics.h
+│   ├── PacketStatistics.h
+│   ├── ProcessManager.h
+│   ├── RingBuffer.h
+│   └── SynchronizationManager.h
 │
 ├── src/
-│   ├── Main.cpp
+│   ├── DatabaseManager.cpp
+│   ├── IDSDetector.cpp
 │   ├── Menu.cpp
+│   ├── PacketBuffer.cpp
 │   ├── PacketCapturer.cpp
 │   ├── PacketLogger.cpp
 │   ├── PacketParser.cpp
-│   └── PacketStatistics.cpp
+│   ├── PacketStatistics.cpp
+│   ├── ProcessManager.cpp
+│   ├── SynchronizationManager.cpp
+│   └── main.cpp
 │
+├── .gitignore
 ├── CMakeLists.txt
 └── README.md
 ```
