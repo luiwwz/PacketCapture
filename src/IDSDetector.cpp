@@ -3,7 +3,7 @@
 #include <iostream>
 
 IDSDetector::IDSDetector()
-    : HIGH_PACKET_RATE_THRESHOLD(100),
+    : HIGH_PACKET_RATE_THRESHOLD(10),
       PORT_SCAN_THRESHOLD(10),
       TIME_WINDOW(60) {}
 

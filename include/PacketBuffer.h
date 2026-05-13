@@ -1,34 +1,32 @@
 #ifndef PACKET_BUFFER_H
 #define PACKET_BUFFER_H
 
-#include "RingBuffer.h"
-#include <sys/mman.h>
-#include <fcntl.h>
+#include "RingBuffer.h" 
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
 class PacketBuffer {
 private:
     static PacketBuffer* instance;
-    RingBuffer<PacketData, 256>* ring_buffer;
-    void* shared_memory;
-    int shm_fd;
-    const char* SHM_NAME;
-    const size_t SHM_SIZE;
 
-    PacketBuffer();
-    ~PacketBuffer();
+    std::queue<PacketData> queue;
+    mutable std::mutex mutex;
+    std::condition_variable packet_available;
+
+    PacketBuffer() = default;
 
 public:
     static PacketBuffer* getInstance();
 
-    void initSharedMemory();
-    void destroySharedMemory();
-
     bool addPacket(const PacketData& packet);
+
     bool getPacket(PacketData& packet);
-    bool peekPacket(PacketData& packet) const;
-    bool isBufferFull() const;
-    bool isBufferEmpty() const;
+
+    bool   isBufferEmpty() const;
     size_t getPacketCount() const;
+
+    void notifyAll();
 };
 
 #endif

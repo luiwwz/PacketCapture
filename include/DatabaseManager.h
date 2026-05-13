@@ -4,12 +4,14 @@
 #include "IDSDetector.h"
 #include <sqlite3.h>
 #include <string>
+#include <mutex>
 
 class DatabaseManager {
 private:
     static DatabaseManager* instance;
     sqlite3* db;
     const char* DB_NAME;
+    std::mutex db_mutex; 
 
     DatabaseManager();
     ~DatabaseManager();

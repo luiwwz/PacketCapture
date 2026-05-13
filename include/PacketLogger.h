@@ -3,11 +3,13 @@
 
 #include <string>
 #include <fstream>
+#include <mutex>
 
 class PacketLogger {
 private:
     static std::ofstream logFile;
     static bool loggingEnabled;
+    static std::mutex log_mutex;
 
 public:
     static void enableLogging();
