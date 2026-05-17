@@ -27,30 +27,29 @@ void ThreadManager::signalHandler(int sig) {
 
 static void analyzerLoop(int id) {
     DatabaseManager& db  = DatabaseManager::getInstance();
-    IDSDetector detector;
-    PacketBuffer& uf = PacketBuffer::getInstance();
+    PacketBuffer& buf = PacketBuffer::getInstance();
     ThreadManager& tm  = ThreadManager::getInstance();
+    IDSDetector& ids = IDSDetector::getInstance();
 
     while (true) {
         PacketData packet;
 
-        if (!uf.getPacket(std::move(packet))) {
+        if (!buf.getPacket(std::move(packet))) {
             if (!tm.shouldContinue()) break;
             continue;
         }
 
-        AlertData* alert = detector.detectThreats(packet);
+	std::unique_ptr<AlertData> alert = ids.detectThreats(packet);
         bool suspicious  = (alert != nullptr);
 
         db.storePacket(std::move(packet), suspicious);
 
-        if (alert != nullptr) {
+        if (alert) {
             db.storeAlert(*alert);
             std::cout << "[ALERT][Thread " << id << "] "
                       << alert->alert_type << ": "
                       << alert->description
                       << " from " << alert->source_ip << "\n";
-            delete alert;
         }
     }
 }

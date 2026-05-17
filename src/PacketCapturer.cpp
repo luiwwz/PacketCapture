@@ -7,6 +7,8 @@
 #include <string>
 #include <netinet/ether.h>
 #include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 #include <sstream>
 #include <cstring>
 #include <arpa/inet.h>
@@ -134,6 +136,21 @@ void PacketCapturer::PacketHandler(u_char* userData,
             inet_ntop(AF_INET, &ip_header->ip_dst, packet_data.dst_ip, INET_ADDRSTRLEN);
 
             packet_data.protocol = ip_header->ip_p;
+
+	    if (ip_header->ip_p == IPPROTO_TCP) {
+                const struct tcphdr* tcp = reinterpret_cast<const struct tcphdr*>(
+                        packet + sizeof(struct ether_header) + ip_header->ip_hl * 4);
+
+                packet_data.src_port = ntohs(tcp->source);
+                packet_data.dst_port = ntohs(tcp->dest);
+
+            } else if (ip_header->ip_p == IPPROTO_UDP) {
+                const struct udphdr* udp = reinterpret_cast<const struct udphdr*>(
+                        packet + sizeof(struct ether_header) + ip_header->ip_hl * 4);
+
+                packet_data.src_port = ntohs(udp->source);
+                packet_data.dst_port = ntohs(udp->dest);
+            }
 
             std::string info = PacketParser::parseIPv4Packet(packet, pkthdr->len, false);
             PacketLogger::log(info);
