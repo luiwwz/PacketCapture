@@ -1,21 +1,10 @@
 #ifndef IDS_DETECTOR_H
 #define IDS_DETECTOR_H
 
-#include "RingBuffer.h"
+#include "PacketData.h"
 #include <string>
 #include <map>
 #include <ctime>
-
-struct AlertData {
-    std::string source_ip;
-    std::string dest_ip;
-    uint16_t source_port;
-    uint16_t dest_port;
-    uint8_t protocol;
-    std::string alert_type;
-    std::string description;
-    time_t timestamp;
-};
 
 class IDSDetector {
 private:

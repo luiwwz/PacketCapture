@@ -1,34 +1,22 @@
 #include "PacketBuffer.h"
 #include "ThreadManager.h"
 
-PacketBuffer* PacketBuffer::instance = nullptr;
-
-PacketBuffer* PacketBuffer::getInstance() {
-    if (instance == nullptr)
-        instance = new PacketBuffer();
-    return instance;
-}
-
-bool PacketBuffer::addPacket(const PacketData& packet) {
+bool PacketBuffer::addPacket(PacketData&& packet) {
     {
         std::lock_guard<std::mutex> lock(mutex);
-        queue.push(packet);  
+        queue.push(std::move(packet));   
     }
-    packet_available.notify_one();  
+    packet_available.notify_one();
     return true;
 }
 
-bool PacketBuffer::getPacket(PacketData& packet) {
+bool PacketBuffer::getPacket(PacketData&& packet) {
     std::unique_lock<std::mutex> lock(mutex);
-
     packet_available.wait(lock, [this] {
-        return !queue.empty() ||
-               !ThreadManager::getInstance()->shouldContinue();
+        return !queue.empty() || !ThreadManager::getInstance().shouldContinue();
     });
-
     if (queue.empty()) return false;
-
-    packet = queue.front();
+    packet = std::move(queue.front());  
     queue.pop();
     return true;
 }

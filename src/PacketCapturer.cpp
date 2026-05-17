@@ -4,6 +4,7 @@
 #include "PacketParser.h"
 #include "PacketBuffer.h"
 #include <iostream>
+#include <string>
 #include <netinet/ether.h>
 #include <netinet/ip.h>
 #include <sstream>
@@ -83,25 +84,24 @@ void PacketCapturer::PacketHandler(u_char* userData,
 
     PacketLogger::log(oss.str());
 
-    const struct ether_header* eth_header =
-    reinterpret_cast<const struct ether_header*>(packet);
-
-    bool isLoopback = (ntohs(eth_header->ether_type) == 0);
-
-    PacketBuffer* buffer = PacketBuffer::getInstance();
     PacketData packet_data;
-
     packet_data.length = pkthdr->len;
     packet_data.timestamp_sec = pkthdr->ts.tv_sec;
     packet_data.timestamp_usec = pkthdr->ts.tv_usec;
+
+    const struct ether_header* eth_header =
+        reinterpret_cast<const struct ether_header*>(packet);
+
+    bool isLoopback = (ntohs(eth_header->ether_type) == 0);
 
     if (isLoopback) {
         const u_char* loopback_packet = packet + 4;
 
         const struct ip* ip_header = reinterpret_cast<const struct ip*>(loopback_packet);
 
-        strcpy(packet_data.src_ip, inet_ntoa(ip_header->ip_src));
-        strcpy(packet_data.dst_ip, inet_ntoa(ip_header->ip_dst));
+        inet_ntop(AF_INET, &ip_header->ip_src, packet_data.src_ip, INET_ADDRSTRLEN);
+        inet_ntop(AF_INET, &ip_header->ip_dst, packet_data.dst_ip, INET_ADDRSTRLEN);
+
         packet_data.protocol = ip_header->ip_p;
 
         switch (ip_header->ip_p) {
@@ -127,9 +127,12 @@ void PacketCapturer::PacketHandler(u_char* userData,
 
         switch (ntohs(eth_hdr->ether_type)) {
         case 0x0800: {
-            const struct ip* ip_header = reinterpret_cast<const struct ip*>(packet + sizeof(struct ether_header));
-            strcpy(packet_data.src_ip, inet_ntoa(ip_header->ip_src));
-            strcpy(packet_data.dst_ip, inet_ntoa(ip_header->ip_dst));
+            const struct ip* ip_header =
+                    reinterpret_cast<const struct ip*>(packet + sizeof(struct ether_header));
+
+            inet_ntop(AF_INET, &ip_header->ip_src, packet_data.src_ip, INET_ADDRSTRLEN);
+            inet_ntop(AF_INET, &ip_header->ip_dst, packet_data.dst_ip, INET_ADDRSTRLEN);
+
             packet_data.protocol = ip_header->ip_p;
 
             std::string info = PacketParser::parseIPv4Packet(packet, pkthdr->len, false);
@@ -138,6 +141,9 @@ void PacketCapturer::PacketHandler(u_char* userData,
         }
 
         case 0x0806: {
+	    strncpy(packet_data.src_ip, "ARP", INET_ADDRSTRLEN);
+            strncpy(packet_data.dst_ip, "ARP", INET_ADDRSTRLEN);
+
             std::string info = PacketParser::parseARPPacket(packet, pkthdr->len);
             PacketLogger::log(info);
             break;
@@ -145,5 +151,5 @@ void PacketCapturer::PacketHandler(u_char* userData,
         }
     }
 
-    buffer->addPacket(packet_data);
+    PacketBuffer::getInstance().addPacket(std::move(packet_data));
 }

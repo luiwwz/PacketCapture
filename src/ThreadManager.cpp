@@ -4,14 +4,12 @@
 #include "IDSDetector.h"
 #include <iostream>
 
-ThreadManager* ThreadManager::instance = nullptr;
 std::atomic<bool> ThreadManager::should_exit(false);
 
 ThreadManager::ThreadManager() {}
 
-ThreadManager* ThreadManager::getInstance() {
-    if (instance == nullptr)
-        instance = new ThreadManager();
+ThreadManager& ThreadManager::getInstance() {
+    static ThreadManager instance;
     return instance;
 }
 
@@ -23,31 +21,31 @@ void ThreadManager::setupSignalHandlers() {
 void ThreadManager::signalHandler(int sig) {
     if (sig == SIGINT || sig == SIGTERM) {
         should_exit = true;
-        PacketBuffer::getInstance()->notifyAll();
+        PacketBuffer::getInstance().notifyAll();
     }
 }
 
 static void analyzerLoop(int id) {
-    DatabaseManager* db  = DatabaseManager::getInstance();
-    IDSDetector      detector;
-    PacketBuffer*    buf = PacketBuffer::getInstance();
-    ThreadManager*   tm  = ThreadManager::getInstance();
+    DatabaseManager& db  = DatabaseManager::getInstance();
+    IDSDetector detector;
+    PacketBuffer& uf = PacketBuffer::getInstance();
+    ThreadManager& tm  = ThreadManager::getInstance();
 
     while (true) {
         PacketData packet;
 
-        if (!buf->getPacket(packet)) {
-            if (!tm->shouldContinue()) break;
+        if (!uf.getPacket(std::move(packet))) {
+            if (!tm.shouldContinue()) break;
             continue;
         }
 
         AlertData* alert = detector.detectThreats(packet);
         bool suspicious  = (alert != nullptr);
 
-        db->storePacket(packet, suspicious);
+        db.storePacket(std::move(packet), suspicious);
 
         if (alert != nullptr) {
-            db->storeAlert(*alert);
+            db.storeAlert(*alert);
             std::cout << "[ALERT][Thread " << id << "] "
                       << alert->alert_type << ": "
                       << alert->description
@@ -65,7 +63,7 @@ void ThreadManager::spawnAnalyzers(int count) {
 
 void ThreadManager::terminateAnalyzers() {
     should_exit = true;
-    PacketBuffer::getInstance()->notifyAll();
+    PacketBuffer::getInstance().notifyAll();
 }
 
 void ThreadManager::waitForAnalyzers() {

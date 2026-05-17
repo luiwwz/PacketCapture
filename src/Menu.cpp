@@ -63,13 +63,13 @@ void Menu::showMainMenu() {
             showPacketCountMenu();
             break;
         case 7: {
-            DatabaseManager* db = DatabaseManager::getInstance();
-            db->displayPackets();
+            DatabaseManager& db = DatabaseManager::getInstance();
+            db.displayPackets();
             break;
         }
         case 8: {
-            DatabaseManager* db = DatabaseManager::getInstance();
-            db->displayAlerts();
+            DatabaseManager& db = DatabaseManager::getInstance();
+            db.displayAlerts();
             break;
         }
         case 9:

@@ -8,14 +8,15 @@
 
 class ThreadManager {
 private:
-    static ThreadManager* instance;
+    
     std::vector<std::thread> analyzer_threads;
     static std::atomic<bool> should_exit;
 
     ThreadManager();
 
 public:
-    static ThreadManager* getInstance();
+
+    static ThreadManager& getInstance();  
 
     void setupSignalHandlers();
     void spawnAnalyzers(int count);

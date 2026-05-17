@@ -5,24 +5,24 @@
 #include <iostream>
 
 int main() {
-    DatabaseManager* db = DatabaseManager::getInstance();
-    db->initDatabase();
+    DatabaseManager& db = DatabaseManager::getInstance();
+    db.initDatabase();
 
-    ThreadManager* tm = ThreadManager::getInstance();
-    tm->setupSignalHandlers();
-    tm->spawnAnalyzers(2);
+    ThreadManager& tm = ThreadManager::getInstance();
+    tm.setupSignalHandlers();
+    tm.spawnAnalyzers(2);
 
     Menu menu;
     menu.showMainMenu();
 
     std::cout << "\nShutting down...\n";
 
-    tm->terminateAnalyzers();
-    tm->waitForAnalyzers();
+    tm.terminateAnalyzers();
+    tm.waitForAnalyzers();
 
-    db->displayPackets();
-    db->displayAlerts();
-    db->closeDatabase();
+    db.displayPackets();
+    db.displayAlerts();
+    db.closeDatabase();
 
     std::cout << "Cleanup completed. Goodbye!\n";
     return 0;
