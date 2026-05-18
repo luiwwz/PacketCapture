@@ -35,7 +35,9 @@ void Menu::showMainMenu() {
         std::cout << "6. Change packet count\n";
         std::cout << "7. View database packets\n";
         std::cout << "8. View security alerts\n";
-        std::cout << "9. Exit\n";
+        std::cout << "9. Clear Database\n";
+	std::cout << "10. View all security alerts (all time)\n";
+	std::cout << "11. Exit\n";
         std::cout << "\nCurrent Interface: " << currentInterface << "\n";
         std::cout << "Packet Count: " << packetCount << "\n";
         std::cout << "Logging: " << (loggingEnabled ? "Enabled" : "Disabled") << "\n";
@@ -64,17 +66,37 @@ void Menu::showMainMenu() {
             break;
         case 7: {
             DatabaseManager& db = DatabaseManager::getInstance();
-            db.displayPackets();
+	    int limit;
+	    std::cout << "How many packets to show?\n";
+	    std::cin >> limit;
+            db.displayPackets(limit);
             break;
         }
+
         case 8: {
             DatabaseManager& db = DatabaseManager::getInstance();
             db.displayAlerts();
             break;
         }
-        case 9:
+
+	case 9: {
+	    DatabaseManager& db = DatabaseManager::getInstance();
+            db.clearDatabase();
+            std::cout << "Database cleared.\n";
+            break;
+        
+	}
+	
+	case 10: {
+            DatabaseManager& db = DatabaseManager::getInstance();
+            db.displayAllAlerts();
+            break; 
+        }	
+
+        case 11:
             std::cout << "Exiting...\n";
             return;
+
         default:
             std::cout << "Invalid option!\n";
         }

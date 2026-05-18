@@ -12,6 +12,8 @@ std::unique_ptr<AlertData> IDSDetector::detectThreats(const PacketData& packet) 
 
     std::string src_ip(packet.src_ip);
 
+   //if (src_ip == "172.24.165.251") return nullptr;
+
     if (isHighPacketRate(src_ip)) {
         auto alert = std::make_unique<AlertData>();
         alert->source_ip   = src_ip;
@@ -35,8 +37,6 @@ std::unique_ptr<AlertData> IDSDetector::detectThreats(const PacketData& packet) 
         alert->timestamp   = time(nullptr);
         return alert;
     }
-
-    if (src_ip == "172.24.165.251") return nullptr;
 
     return nullptr;
 }
@@ -76,16 +76,6 @@ bool IDSDetector::isHighPacketRate(const std::string& ip) {
 bool IDSDetector::isPortScanAttempt(const std::string& src_ip, uint16_t dst_port) {
     port_scan_attempts[src_ip].insert(dst_port);
     return port_scan_attempts[src_ip].size() > PORT_SCAN_THRESHOLD;
-}
-
-bool IDSDetector::isSuspiciousTCPFlags(uint8_t tcp_flags) {
-    uint8_t SYN_FIN = 0x02 | 0x01;
-    uint8_t SYN_RST = 0x02 | 0x04;
-    uint8_t FIN_RST = 0x01 | 0x04;
-    if ((tcp_flags & SYN_FIN) == SYN_FIN) return true;
-    if ((tcp_flags & SYN_RST) == SYN_RST) return true;
-    if ((tcp_flags & FIN_RST) == FIN_RST) return true;
-    return false;
 }
 
 void IDSDetector::resetStatistics() {

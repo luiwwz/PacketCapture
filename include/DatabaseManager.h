@@ -6,6 +6,8 @@
 #include <string>
 #include <mutex>
 #include <vector>
+#include <utility>  // std::pair
+#include <ctime>		    
 
 class DatabaseManager {
 private:
@@ -14,9 +16,11 @@ private:
     const char* DB_NAME = "packet_sniffer.db";
     std::mutex db_mutex;
 
-    std::vector<PacketData> packet_batch;
+    time_t session_start = 0;
+
+    std::vector<std::pair<PacketData, bool>> packet_batch;
     static constexpr int BATCH_SIZE = 100;
-    void flushBatch(); 
+    void flushBatch();
 
     DatabaseManager() = default;
     ~DatabaseManager() = default;
@@ -29,10 +33,13 @@ public:
     }
 
     void initDatabase();
+    void displayAllAlerts();
     void closeDatabase();
+    void clearDatabase();
     void storePacket(PacketData&& packet, bool is_suspicious);
     void storeAlert(const AlertData& alert);
-    void displayPackets();
+
+    void displayPackets(int limit = 20);
     void displayAlerts();
 };
 

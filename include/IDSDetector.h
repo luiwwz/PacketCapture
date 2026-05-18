@@ -26,7 +26,6 @@ private:
 
     bool isHighPacketRate(const std::string& ip);
     bool isPortScanAttempt(const std::string& src_ip, uint16_t dst_port);
-    bool isSuspiciousTCPFlags(uint8_t flags);
 
     IDSDetector();
     IDSDetector(const IDSDetector&) = delete;
