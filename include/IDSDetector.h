@@ -19,6 +19,7 @@ private:
 
     std::map<std::string, std::set<uint16_t>> port_scan_attempts;
     std::map<std::string, time_t> ip_last_alert;
+    std::map<std::string, time_t> port_scan_last_alert;
 
     const int  HIGH_PACKET_RATE_THRESHOLD;
     const int  PORT_SCAN_THRESHOLD;

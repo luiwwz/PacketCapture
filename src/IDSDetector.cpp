@@ -74,8 +74,26 @@ bool IDSDetector::isHighPacketRate(const std::string& ip) {
 }
 
 bool IDSDetector::isPortScanAttempt(const std::string& src_ip, uint16_t dst_port) {
+    time_t now = time(nullptr);
+
+    if (port_scan_last_alert.count(src_ip) &&
+        (now - port_scan_last_alert[src_ip]) > TIME_WINDOW) {
+        port_scan_attempts[src_ip].clear();
+        port_scan_last_alert.erase(src_ip);
+    }
+
     port_scan_attempts[src_ip].insert(dst_port);
-    return port_scan_attempts[src_ip].size() > PORT_SCAN_THRESHOLD;
+
+    if ((int)port_scan_attempts[src_ip].size() > PORT_SCAN_THRESHOLD) {
+        if (!port_scan_last_alert.count(src_ip) ||
+            (now - port_scan_last_alert[src_ip]) > TIME_WINDOW) {
+            port_scan_last_alert[src_ip] = now;
+            port_scan_attempts[src_ip].clear();
+            return true;
+        }
+        return false;
+    }
+    return false;
 }
 
 void IDSDetector::resetStatistics() {
@@ -84,4 +102,5 @@ void IDSDetector::resetStatistics() {
     ip_last_reset.clear();
     port_scan_attempts.clear();
     ip_last_alert.clear();
+    port_scan_last_alert.clear();
 }

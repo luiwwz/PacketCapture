@@ -214,6 +214,8 @@ void DatabaseManager::displayAllAlerts() {
 void DatabaseManager::clearDatabase() {
     std::lock_guard<std::mutex> lock(db_mutex);
     packet_batch.clear();
+    sqlite3_exec(db, "DELETE FROM sqlite_sequence WHERE name='packets';", nullptr, nullptr, nullptr);
+    sqlite3_exec(db, "DELETE FROM sqlite_sequence WHERE name='alerts';",  nullptr, nullptr, nullptr);
     sqlite3_exec(db, "DELETE FROM packets;", nullptr, nullptr, nullptr);
     sqlite3_exec(db, "DELETE FROM alerts;",  nullptr, nullptr, nullptr);
     sqlite3_exec(db, "VACUUM;", nullptr, nullptr, nullptr); 
