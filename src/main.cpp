@@ -10,8 +10,8 @@ int main() {
 
     ThreadManager& tm = ThreadManager::getInstance();
     tm.setupSignalHandlers();
-    tm.spawnAnalyzers(2);
-
+    tm.spawnAnalyzers(3);
+   
     Menu menu;
     menu.showMainMenu();
 

@@ -13,6 +13,14 @@
 #include <cstring>
 #include <arpa/inet.h>
 
+#define SLL_HEADER_LEN 16
+#define SLL_PROTO_OFFSET 14 
+
+struct CaptureContext {
+    PacketCapturer* capturer;
+    int datalink_type;
+};
+
 PacketCapturer::PacketCapturer(const std::string& interface_)
     : interface(interface_) {}
 
@@ -25,6 +33,10 @@ void PacketCapturer::startCapture(const std::string& ip, int protocolChoice, int
         std::cout << "Error opening device " << errbuf << std::endl;
         return;
     }
+
+    int datalink = pcap_datalink(handle);
+    std::cout << "Datalink type: " << datalink << " ("
+              << pcap_datalink_val_to_name(datalink) << ")\n";
 
     std::string filter;
 
@@ -65,7 +77,8 @@ void PacketCapturer::startCapture(const std::string& ip, int protocolChoice, int
         std::cout << "Waiting for packets... (Press Ctrl+C to stop)\n";
     }
 
-    pcap_loop(handle, packetCount, PacketHandler, (u_char*)this);
+    CaptureContext ctx{ this, datalink };
+    pcap_loop(handle, packetCount, PacketHandler, (u_char*)&ctx);
 
     PacketLogger::closeLog();
     pcap_close(handle);
@@ -75,79 +88,87 @@ void PacketCapturer::PacketHandler(u_char* userData,
     const struct pcap_pkthdr* pkthdr,
     const u_char* packet) {
 
-    PacketStatistics::incrementTotal();
+    CaptureContext* ctx = reinterpret_cast<CaptureContext*>(userData);
+    int datalink = ctx->datalink_type;
 
+    PacketStatistics::incrementTotal();
     std::cout << PacketStatistics::getTotalPackets() << " Packet captured\n";
 
     std::ostringstream oss;
-
     oss << "Size: " << pkthdr->len << " bytes\n"
         << "Time: " << pkthdr->ts.tv_sec << "." << pkthdr->ts.tv_usec;
-
     PacketLogger::log(oss.str());
 
     PacketData packet_data;
-    packet_data.length = pkthdr->len;
-    packet_data.timestamp_sec = pkthdr->ts.tv_sec;
+    packet_data.length        = pkthdr->len;
+    packet_data.timestamp_sec  = pkthdr->ts.tv_sec;
     packet_data.timestamp_usec = pkthdr->ts.tv_usec;
-
-    const struct ether_header* eth_header =
-        reinterpret_cast<const struct ether_header*>(packet);
-
-    bool isLoopback = (ntohs(eth_header->ether_type) == 0);
-
-    if (isLoopback) {
-        const u_char* loopback_packet = packet + 4;
-
-        const struct ip* ip_header = reinterpret_cast<const struct ip*>(loopback_packet);
+  
+    if (datalink == DLT_NULL) {
+        const u_char* ip_start = packet + 4;
+        const struct ip* ip_header = reinterpret_cast<const struct ip*>(ip_start);
 
         inet_ntop(AF_INET, &ip_header->ip_src, packet_data.src_ip, INET_ADDRSTRLEN);
         inet_ntop(AF_INET, &ip_header->ip_dst, packet_data.dst_ip, INET_ADDRSTRLEN);
-
         packet_data.protocol = ip_header->ip_p;
 
-        switch (ip_header->ip_p) {
-        case IPPROTO_ICMP: {
-            std::string info = PacketParser::parseIPv4Packet(loopback_packet, pkthdr->len - 4, true);
+        std::string info = PacketParser::parseIPv4Packet(ip_start, pkthdr->len - 4, true);
+        PacketLogger::log(info);
+
+    } else if (datalink == DLT_LINUX_SLL) {
+        uint16_t ether_type = ntohs(*(uint16_t*)(packet + SLL_PROTO_OFFSET));
+        const u_char* ip_start = packet + SLL_HEADER_LEN;
+
+        if (ether_type == 0x0800) {  // IPv4
+            const struct ip* ip_header = reinterpret_cast<const struct ip*>(ip_start);
+
+            inet_ntop(AF_INET, &ip_header->ip_src, packet_data.src_ip, INET_ADDRSTRLEN);
+            inet_ntop(AF_INET, &ip_header->ip_dst, packet_data.dst_ip, INET_ADDRSTRLEN);
+            packet_data.protocol = ip_header->ip_p;
+
+            if (ip_header->ip_p == IPPROTO_TCP) {
+                const struct tcphdr* tcp = reinterpret_cast<const struct tcphdr*>(
+                    ip_start + ip_header->ip_hl * 4);
+                packet_data.src_port = ntohs(tcp->source);
+                packet_data.dst_port = ntohs(tcp->dest);
+            } else if (ip_header->ip_p == IPPROTO_UDP) {
+                const struct udphdr* udp = reinterpret_cast<const struct udphdr*>(
+                    ip_start + ip_header->ip_hl * 4);
+                packet_data.src_port = ntohs(udp->source);
+                packet_data.dst_port = ntohs(udp->dest);
+            }
+
+            std::string info = PacketParser::parseIPv4Packet(ip_start, pkthdr->len - SLL_HEADER_LEN, true);
             PacketLogger::log(info);
-            break;
+
+        } else if (ether_type == 0x0806) {  // ARP
+            strncpy(packet_data.src_ip, "ARP", INET_ADDRSTRLEN);
+            strncpy(packet_data.dst_ip, "ARP", INET_ADDRSTRLEN);
+            // ARP поверх SLL — парсер ожидает ethernet, пропускаем
+            PacketLogger::log("ARP (SLL)\n");
         }
-        case IPPROTO_TCP: {
-            std::string info = PacketParser::parseIPv4Packet(loopback_packet, pkthdr->len - 4, true);
-            PacketLogger::log(info);
-            break;
-        }
-        case IPPROTO_UDP: {
-            std::string info = PacketParser::parseIPv4Packet(loopback_packet, pkthdr->len - 4, true);
-            PacketLogger::log(info);
-            break;
-        }
-        }
-    } else {
+
+     } else {
         const struct ether_header* eth_hdr =
             reinterpret_cast<const struct ether_header*>(packet);
 
         switch (ntohs(eth_hdr->ether_type)) {
         case 0x0800: {
             const struct ip* ip_header =
-                    reinterpret_cast<const struct ip*>(packet + sizeof(struct ether_header));
+                reinterpret_cast<const struct ip*>(packet + sizeof(struct ether_header));
 
             inet_ntop(AF_INET, &ip_header->ip_src, packet_data.src_ip, INET_ADDRSTRLEN);
             inet_ntop(AF_INET, &ip_header->ip_dst, packet_data.dst_ip, INET_ADDRSTRLEN);
-
             packet_data.protocol = ip_header->ip_p;
 
-	    if (ip_header->ip_p == IPPROTO_TCP) {
+            if (ip_header->ip_p == IPPROTO_TCP) {
                 const struct tcphdr* tcp = reinterpret_cast<const struct tcphdr*>(
-                        packet + sizeof(struct ether_header) + ip_header->ip_hl * 4);
-
+                    packet + sizeof(struct ether_header) + ip_header->ip_hl * 4);
                 packet_data.src_port = ntohs(tcp->source);
                 packet_data.dst_port = ntohs(tcp->dest);
-
             } else if (ip_header->ip_p == IPPROTO_UDP) {
                 const struct udphdr* udp = reinterpret_cast<const struct udphdr*>(
-                        packet + sizeof(struct ether_header) + ip_header->ip_hl * 4);
-
+                    packet + sizeof(struct ether_header) + ip_header->ip_hl * 4);
                 packet_data.src_port = ntohs(udp->source);
                 packet_data.dst_port = ntohs(udp->dest);
             }
@@ -158,9 +179,8 @@ void PacketCapturer::PacketHandler(u_char* userData,
         }
 
         case 0x0806: {
-	    strncpy(packet_data.src_ip, "ARP", INET_ADDRSTRLEN);
+            strncpy(packet_data.src_ip, "ARP", INET_ADDRSTRLEN);
             strncpy(packet_data.dst_ip, "ARP", INET_ADDRSTRLEN);
-
             std::string info = PacketParser::parseARPPacket(packet, pkthdr->len);
             PacketLogger::log(info);
             break;

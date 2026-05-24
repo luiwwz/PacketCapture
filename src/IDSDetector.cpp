@@ -12,8 +12,6 @@ std::unique_ptr<AlertData> IDSDetector::detectThreats(const PacketData& packet) 
 
     std::string src_ip(packet.src_ip);
 
-   //if (src_ip == "172.24.165.251") return nullptr;
-
     if (isHighPacketRate(src_ip)) {
         auto alert = std::make_unique<AlertData>();
         alert->source_ip   = src_ip;
