@@ -42,7 +42,6 @@ The sniffer currently recognizes and analyzes:
 - C++17
 - `libpcap`
 - CMake
-- Linux networking APIs
 - Object-Oriented Programming (OOP)
 - Interprocess Communication (IPC)
 
